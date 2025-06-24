@@ -68,6 +68,14 @@ def main():
             if last_text and (time.time() - last_text_time <= text_display_duration):
                 cv2.putText(display_frame,
                             f"Detected: {last_text}",
+                            (11, 31),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            (0, 0, 0),
+                            3,
+                            cv2.LINE_AA)
+                cv2.putText(display_frame,
+                            f"Detected: {last_text}",
                             (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.8,
