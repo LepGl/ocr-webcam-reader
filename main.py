@@ -12,7 +12,7 @@ ROI = [100, 200, 300, 100]
 # Text overlay
 last_text = ""
 last_text_time = 0
-text_display_duration = 3  # seconds
+text_display_duration = 3
 
 roi_selection_mode = False
 selecting_roi = False
@@ -26,8 +26,10 @@ def preprocess_image(roi_frame):
 
 def mouse_callback(event, x, y, flags, param):
     global selecting_roi, roi_start, roi_end, ROI, roi_selection_mode
+
     if not roi_selection_mode:
         return 
+    
     if event == cv2.EVENT_LBUTTONDOWN:
         selecting_roi = True
         roi_start = (x, y)
@@ -53,14 +55,18 @@ def main():
     if not cap.isOpened():
         print("Cannot open camera")
         return
+    
     cv2.namedWindow('Webcam Feed with ROI')
     cv2.setMouseCallback('Webcam Feed with ROI', mouse_callback)
+
     while True:
         ret, frame = cap.read()
         if not ret or frame is None:
             print("Failed to grab frame")
             continue
+
         display_frame = frame.copy()
+
         # Draw ROI
         x, y, w, h = ROI
         if x + w <= frame.shape[1] and y + h <= frame.shape[0]:
@@ -82,10 +88,14 @@ def main():
                             (0, 255, 0),
                             2,
                             cv2.LINE_AA)
+                
         if roi_selection_mode and selecting_roi:
             cv2.rectangle(display_frame, roi_start, roi_end, (255, 0, 0), 2)
+
         cv2.imshow('Webcam Feed with ROI', display_frame)
+
         key = cv2.waitKey(1) & 0xFF
+
         if key == ord(' '):  # Spacebar = OCR
             roi_frame = frame[y:y+h, x:x+w]
             processed = preprocess_image(roi_frame)
@@ -98,6 +108,7 @@ def main():
             roi_selection_mode = True
         elif key == ord('q'):  # Quit
             break
+
     cap.release()
     cv2.destroyAllWindows()
 
