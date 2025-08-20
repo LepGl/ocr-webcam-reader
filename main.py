@@ -34,6 +34,7 @@ def save_roi(roi):
 
 ROI = load_roi()
 CAMERA_INDEX = 0
+OCR_LANGUAGE = "eng"
 USE_7SEGMENT_OCR = False
 last_text = ""
 last_text_time = 0
@@ -62,7 +63,11 @@ def ocr_7segment(frame):
         f"--psm 6 -c tessedit_char_whitelist=0123456789 "
         f"--tessdata-dir \"{tessdata_dir}\" digits"
     )
-    return pytesseract.image_to_string(processed, config=config).strip()
+    return pytesseract.image_to_string(
+        processed,
+        config=config,
+        lang=OCR_LANGUAGE,
+    ).strip()
 
 def mouse_callback(event, x, y, flags, param):
     global selecting_roi, roi_start, roi_end, ROI, roi_selection_mode
@@ -141,7 +146,11 @@ def main():
                 text = ocr_7segment(roi_frame)
             else:
                 processed = preprocess_image(roi_frame)
-                text = pytesseract.image_to_string(processed, config='--psm 6').strip()
+                text = pytesseract.image_to_string(
+                    processed,
+                    config="--psm 6",
+                    lang=OCR_LANGUAGE,
+                ).strip()
             print("Detected text:", text)
             last_text = text
             last_text_time = time.time()
