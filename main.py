@@ -9,6 +9,7 @@ pytesseract.pytesseract.tesseract_cmd = tesseract_path
 tessdata_dir = os.path.join(project_root, 'Tesseract-OCR', 'tessdata')
 
 ROI = [100, 200, 300, 100]
+CAMERA_INDEX = 0
 USE_7SEGMENT_OCR = False
 last_text = ""
 last_text_time = 0
@@ -66,7 +67,7 @@ def mouse_callback(event, x, y, flags, param):
 def main():
     global last_text, last_text_time, ROI, roi_selection_mode
 
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
         print("Cannot open camera")
         return
