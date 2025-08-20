@@ -9,6 +9,7 @@ A Python project that uses a USB webcam and Tesseract OCR to detect and read tex
 - Dynamic ROI selection with mouse
 - On-screen display of detected text
 - Auto-fade of text after 3 seconds
+- ROI persists between runs via roi.json
 
 ## Usage
 
