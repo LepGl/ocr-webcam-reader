@@ -5,9 +5,12 @@ import pytesseract
 import time
 
 project_root = os.path.dirname(__file__)
-tesseract_path = os.path.join(project_root, 'Tesseract-OCR', 'tesseract.exe')
-pytesseract.pytesseract.tesseract_cmd = tesseract_path
-tessdata_dir = os.path.join(project_root, 'Tesseract-OCR', 'tessdata')
+if os.name == "nt":
+    tesseract_cmd = os.path.join(project_root, "Tesseract-OCR", "tesseract.exe")
+else:
+    tesseract_cmd = "tesseract"
+pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+tessdata_dir = os.path.join(project_root, "Tesseract-OCR", "tessdata")
 ROI_FILE = os.path.join(project_root, 'roi.json')
 DEFAULT_ROI = [100, 200, 300, 100]
 
@@ -39,6 +42,9 @@ USE_7SEGMENT_OCR = False
 last_text = ""
 last_text_time = 0
 text_display_duration = 3
+AUTO_SCAN_ENABLED = False
+AUTO_SCAN_INTERVAL = 5
+last_scan_time = 0
 
 roi_selection_mode = False
 selecting_roi = False
@@ -94,14 +100,27 @@ def mouse_callback(event, x, y, flags, param):
             save_roi(ROI)
         roi_selection_mode = False
 
+def scan(frame):
+    x, y, w, h = ROI
+    roi_frame = frame[y:y + h, x:x + w]
+    if USE_7SEGMENT_OCR:
+        return ocr_7segment(roi_frame)
+    processed = preprocess_image(roi_frame)
+    return pytesseract.image_to_string(
+        processed,
+        config="--psm 6",
+        lang=OCR_LANGUAGE,
+    ).strip()
+
 def main():
-    global last_text, last_text_time, ROI, roi_selection_mode
+    global last_text, last_text_time, ROI, roi_selection_mode, last_scan_time
 
     cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
         print("Cannot open camera")
         return
-    
+    last_scan_time = time.time()
+
     cv2.namedWindow('Webcam Feed with ROI')
     cv2.setMouseCallback('Webcam Feed with ROI', mouse_callback)
 
@@ -132,28 +151,37 @@ def main():
                             (0, 255, 0),
                             2,
                             cv2.LINE_AA)
-                
+
         if roi_selection_mode and selecting_roi:
             cv2.rectangle(display_frame, roi_start, roi_end, (255, 0, 0), 2)
+
+        if AUTO_SCAN_ENABLED:
+            time_left = int(max(0, AUTO_SCAN_INTERVAL - (time.time() - last_scan_time)))
+            cv2.putText(display_frame,
+                        f"Next scan in: {time_left}",
+                        (10, 60),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 255, 0),
+                        2,
+                        cv2.LINE_AA)
+            if time_left == 0:
+                text = scan(frame)
+                print("Detected text:", text)
+                last_text = text
+                last_text_time = time.time()
+                last_scan_time = last_text_time
 
         cv2.imshow('Webcam Feed with ROI', display_frame)
 
         key = cv2.waitKey(1) & 0xFF
 
         if key == ord(' '):
-            roi_frame = frame[y:y+h, x:x+w]
-            if USE_7SEGMENT_OCR:
-                text = ocr_7segment(roi_frame)
-            else:
-                processed = preprocess_image(roi_frame)
-                text = pytesseract.image_to_string(
-                    processed,
-                    config="--psm 6",
-                    lang=OCR_LANGUAGE,
-                ).strip()
+            text = scan(frame)
             print("Detected text:", text)
             last_text = text
             last_text_time = time.time()
+            last_scan_time = last_text_time
         elif key == ord('r'):
             print("ROI selection mode activated. Click and drag to set new ROI.")
             roi_selection_mode = True
