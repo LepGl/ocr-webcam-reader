@@ -1,4 +1,5 @@
 import os
+import json
 import cv2
 import pytesseract
 import time
@@ -7,8 +8,31 @@ project_root = os.path.dirname(__file__)
 tesseract_path = os.path.join(project_root, 'Tesseract-OCR', 'tesseract.exe')
 pytesseract.pytesseract.tesseract_cmd = tesseract_path
 tessdata_dir = os.path.join(project_root, 'Tesseract-OCR', 'tessdata')
+ROI_FILE = os.path.join(project_root, 'roi.json')
+DEFAULT_ROI = [100, 200, 300, 100]
 
-ROI = [100, 200, 300, 100]
+def load_roi():
+    try:
+        with open(ROI_FILE, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+        if (
+            isinstance(data, list)
+            and len(data) == 4
+            and all(isinstance(n, int) and n >= 0 for n in data)
+        ):
+            return data
+    except (OSError, json.JSONDecodeError):
+        pass
+    return DEFAULT_ROI.copy()
+
+def save_roi(roi):
+    try:
+        with open(ROI_FILE, 'w', encoding='utf-8') as file:
+            json.dump(roi, file)
+    except OSError as error:
+        print(f"Failed to save ROI: {error}")
+
+ROI = load_roi()
 CAMERA_INDEX = 0
 USE_7SEGMENT_OCR = False
 last_text = ""
@@ -62,7 +86,8 @@ def mouse_callback(event, x, y, flags, param):
         if w_new > 0 and h_new > 0:
             ROI = [x_new, y_new, w_new, h_new]
             print(f"New ROI set to: {ROI}")
-        roi_selection_mode = False 
+            save_roi(ROI)
+        roi_selection_mode = False
 
 def main():
     global last_text, last_text_time, ROI, roi_selection_mode
