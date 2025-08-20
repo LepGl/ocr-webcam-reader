@@ -6,10 +6,10 @@ import time
 project_root = os.path.dirname(__file__)
 tesseract_path = os.path.join(project_root, 'Tesseract-OCR', 'tesseract.exe')
 pytesseract.pytesseract.tesseract_cmd = tesseract_path
+tessdata_dir = os.path.join(project_root, 'Tesseract-OCR', 'tessdata')
 
 ROI = [100, 200, 300, 100]
-
-# Text overlay
+USE_7SEGMENT_OCR = False
 last_text = ""
 last_text_time = 0
 text_display_duration = 3
@@ -21,8 +21,23 @@ roi_end = (0, 0)
 
 def preprocess_image(roi_frame):
     gray = cv2.cvtColor(roi_frame, cv2.COLOR_BGR2GRAY)
+    if USE_7SEGMENT_OCR:
+        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+        return closed
     _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
     return thresh
+
+
+def ocr_7segment(frame):
+    """Preprocess and run OCR optimized for seven-segment digits."""
+    processed = preprocess_image(frame)
+    config = (
+        f"--psm 6 -c tessedit_char_whitelist=0123456789 "
+        f"--tessdata-dir \"{tessdata_dir}\" digits"
+    )
+    return pytesseract.image_to_string(processed, config=config).strip()
 
 def mouse_callback(event, x, y, flags, param):
     global selecting_roi, roi_start, roi_end, ROI, roi_selection_mode
@@ -66,8 +81,6 @@ def main():
             continue
 
         display_frame = frame.copy()
-
-        # Draw ROI
         x, y, w, h = ROI
         if x + w <= frame.shape[1] and y + h <= frame.shape[0]:
             cv2.rectangle(display_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -96,17 +109,20 @@ def main():
 
         key = cv2.waitKey(1) & 0xFF
 
-        if key == ord(' '):  # Spacebar = OCR
+        if key == ord(' '):
             roi_frame = frame[y:y+h, x:x+w]
-            processed = preprocess_image(roi_frame)
-            text = pytesseract.image_to_string(processed, config='--psm 6').strip()
+            if USE_7SEGMENT_OCR:
+                text = ocr_7segment(roi_frame)
+            else:
+                processed = preprocess_image(roi_frame)
+                text = pytesseract.image_to_string(processed, config='--psm 6').strip()
             print("Detected text:", text)
             last_text = text
             last_text_time = time.time()
-        elif key == ord('r'):  # Enable ROI drawing mode
+        elif key == ord('r'):
             print("ROI selection mode activated. Click and drag to set new ROI.")
             roi_selection_mode = True
-        elif key == ord('q'):  # Quit
+        elif key == ord('q'):
             break
 
     cap.release()
