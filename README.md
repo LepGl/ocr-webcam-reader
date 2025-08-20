@@ -12,6 +12,12 @@ A Python project that uses a USB webcam and Tesseract OCR to detect and read tex
 
 ## Usage
 
+```bash
+python main.py
+```
+
+By default, camera index 0 is used. Update `CAMERA_INDEX` in `main.py` to select a different camera.
+
 ### Controls
 - `r` – Enter ROI selection mode (click and drag to select)
 - `spacebar` – Perform OCR on selected ROI
@@ -32,3 +38,4 @@ This project includes a portable version of Tesseract OCR (Windows only) under `
 
 ```bash
 pip install opencv-python pytesseract
+```
